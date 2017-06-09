@@ -9,6 +9,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/mgravlin/telegraf/plugins/serializers/wavefront"
+	//"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -55,6 +57,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
+	case "wavefront":
+		serializer, err = NewWavefrontSerializer(config.Prefix)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -73,5 +77,11 @@ func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
 	return &graphite.GraphiteSerializer{
 		Prefix:   prefix,
 		Template: template,
+	}, nil
+}
+
+func NewWavefrontSerializer(prefix string) (Serializer, error) {
+	return &wavefront.WavefrontSerializer{
+		Prefix: prefix,
 	}, nil
 }

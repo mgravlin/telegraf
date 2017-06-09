@@ -5,6 +5,7 @@ Telegraf is able to serialize metrics into the following output data formats:
 1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#influx)
 1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#json)
 1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite)
+1. [Wavefront](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#wavefront)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -158,3 +159,27 @@ microseconds (`us` or `µs`), milliseconds (`ms`), or seconds (`s`). Note that t
 parameter will be truncated to the nearest power of 10 that, so if the `json_timestamp_units`
 are set to `15ms` the timestamps for the JSON format serialized Telegraf metrics will be
 output in hundredths of a second (`10ms`).
+
+### Wavefront Configuration:
+
+The Wavefront data format translates Telegraf metrics into the Wavefront format. The Wavefront format is:
+
+```<metricName> <metricValue> [<timestamp>] source=<source> [pointTags]
+```
+
+### Wavefront Configuration:
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["stdout", "/tmp/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "wavefront"
+
+  # prefix each wavefront metric
+  prefix = "telegraf"
+```
