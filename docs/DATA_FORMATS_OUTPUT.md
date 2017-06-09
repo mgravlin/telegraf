@@ -160,11 +160,12 @@ parameter will be truncated to the nearest power of 10 that, so if the `json_tim
 are set to `15ms` the timestamps for the JSON format serialized Telegraf metrics will be
 output in hundredths of a second (`10ms`).
 
-### Wavefront Configuration:
+# Wavefront:
 
 The Wavefront data format translates Telegraf metrics into the Wavefront format. The Wavefront format is:
 
-```<metricName> <metricValue> [<timestamp>] source=<source> [pointTags]
+```
+<metricName> <metricValue> [<timestamp>] source=<source> [pointTags]
 ```
 
 ### Wavefront Configuration:
