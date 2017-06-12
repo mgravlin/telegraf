@@ -9,8 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
-	"github.com/mgravlin/telegraf/plugins/serializers/wavefront"
-	//"github.com/influxdata/telegraf/plugins/serializers/wavefront"
+	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -44,6 +43,14 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
+
+	// Point tags to use as the source name for Wavefront (if none found,
+	// host will be used). Only supports Wavefront
+	SourceOverride []string
+
+	// If the source is overridden, this name will be used for host tag
+	// Only supports Wavefront
+	HostTag string
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -58,7 +65,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "wavefront":
-		serializer, err = NewWavefrontSerializer(config.Prefix)
+		serializer, err = NewWavefrontSerializer(config.Prefix, config.HostTag, config.SourceOverride)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -80,8 +87,10 @@ func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
 	}, nil
 }
 
-func NewWavefrontSerializer(prefix string) (Serializer, error) {
+func NewWavefrontSerializer(prefix string, hostTag string, sourceOverride []string) (Serializer, error) {
 	return &wavefront.WavefrontSerializer{
-		Prefix: prefix,
+		Prefix:         prefix,
+		HostTag:        hostTag,
+		SourceOverride: sourceOverride,
 	}, nil
 }

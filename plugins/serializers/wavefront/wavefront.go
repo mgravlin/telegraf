@@ -12,7 +12,9 @@ import (
 
 // WavefrontSerializer : WavefrontSerializer struct
 type WavefrontSerializer struct {
-	Prefix string
+	Prefix         string
+	HostTag        string
+	SourceOverride []string
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -33,18 +35,11 @@ func (s *WavefrontSerializer) Serialize(metric telegraf.Metric) ([]byte, error) 
 	metricSeparator := "."
 	for fieldName, value := range metric.Fields() {
 		var name string
+
 		if fieldName == "value" {
-			if len(s.Prefix) > 0 {
-				name = fmt.Sprintf("%s.%s", s.Prefix, metric.Name())
-			} else {
-				name = fmt.Sprintf("%s", metric.Name())
-			}
+			name = fmt.Sprintf("%s%s", s.Prefix, metric.Name())
 		} else {
-			if len(s.Prefix) > 0 {
-				name = fmt.Sprintf("%s.%s%s%s", s.Prefix, metric.Name(), metricSeparator, fieldName)
-			} else {
-				name = fmt.Sprintf("%s%s%s", metric.Name(), metricSeparator, fieldName)
-			}
+			name = fmt.Sprintf("%s%s%s%s", s.Prefix, metric.Name(), metricSeparator, fieldName)
 		}
 
 		name = sanitizedChars.Replace(name)
@@ -57,7 +52,7 @@ func (s *WavefrontSerializer) Serialize(metric telegraf.Metric) ([]byte, error) 
 			continue
 		}
 
-		tagsSlice := buildTags(metric.Tags())
+		tagsSlice := buildTags(metric.Tags(), s)
 		tags := fmt.Sprint(strings.Join(tagsSlice, " "))
 		point := []byte(fmt.Sprintf("%s %s %d %s\n", name, metricValue, timestamp, tags))
 		out = append(out, point...)
@@ -68,6 +63,12 @@ func (s *WavefrontSerializer) Serialize(metric telegraf.Metric) ([]byte, error) 
 func buildValue(v interface{}, name string) (string, error) {
 	var retv string
 	switch p := v.(type) {
+	case bool:
+		if bool(p) {
+			return "1.0", nil
+		} else {
+			return "0.0", nil
+		}
 	case int64:
 		retv = intToString(int64(p))
 	case uint64:
@@ -92,15 +93,18 @@ func floatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
-func buildTags(mTags map[string]string) []string {
+func buildTags(mTags map[string]string, s *WavefrontSerializer) []string {
+	if s.HostTag == "" {
+		s.HostTag = "telegraf_host"
+	}
+	hosttag := s.HostTag
 	sourceTagFound := false
-	SourceOverride := []string{"instanceid", "instance-id", "hostname", "snmp_host", "node_host"}
 
-	for _, s := range SourceOverride {
+	for _, s := range s.SourceOverride {
 		for k, v := range mTags {
 			if k == s {
 				mTags["source"] = v
-				mTags["telegraf_host"] = mTags["host"]
+				mTags[hosttag] = mTags["host"]
 				sourceTagFound = true
 				delete(mTags, k)
 				break

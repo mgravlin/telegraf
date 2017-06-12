@@ -57,8 +57,30 @@ func TestBuildTags(t *testing.T) {
 			[]string{"Sp-ci-l-Chars=\"\\\"g-t repl#ced\"", "source=\"testHost\""},
 		},
 	}
+	s := WavefrontSerializer{SourceOverride: []string{"instanceid", "instance-id", "hostname", "snmp_host", "node_host"}}
+
 	for _, tt := range tagtests {
-		tags := buildTags(tt.ptIn)
+		tags := buildTags(tt.ptIn, &s)
+		if !reflect.DeepEqual(tags, tt.outTags) {
+			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outTags, tags)
+		}
+	}
+}
+
+func TestBuildTagsHostTag(t *testing.T) {
+	var tagtests = []struct {
+		ptIn    map[string]string
+		outTags []string
+	}{
+		{
+			map[string]string{"one": "two", "host": "testHost", "snmp_host": "snmpHost"},
+			[]string{"hostname=\"testHost\"", "one=\"two\"", "source=\"snmpHost\""},
+		},
+	}
+	s := WavefrontSerializer{SourceOverride: []string{"snmp_host"}, HostTag: "hostname"}
+
+	for _, tt := range tagtests {
+		tags := buildTags(tt.ptIn, &s)
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outTags, tags)
 		}
@@ -107,6 +129,69 @@ func TestSerializeMetricInt(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
+func TestSerializeMetricBoolTrue(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"cpu":  "cpu0",
+		"host": "realHost",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": true,
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := WavefrontSerializer{}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+
+	expS := []string{fmt.Sprintf("cpu.usage.idle 1.0 %d cpu=\"cpu0\" source=\"realHost\"", now.UnixNano()/1000000000)}
+	assert.Equal(t, expS, mS)
+}
+
+func TestSerializeMetricBoolFalse(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"cpu":  "cpu0",
+		"host": "realHost",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": false,
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := WavefrontSerializer{}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+
+	expS := []string{fmt.Sprintf("cpu.usage.idle 0.0 %d cpu=\"cpu0\" source=\"realHost\"", now.UnixNano()/1000000000)}
+	assert.Equal(t, expS, mS)
+}
+
+func TestSerializeMetricFieldValue(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"cpu":  "cpu0",
+		"host": "realHost",
+	}
+	fields := map[string]interface{}{
+		"value": int64(91),
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := WavefrontSerializer{}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+
+	expS := []string{fmt.Sprintf("cpu 91 %d cpu=\"cpu0\" source=\"realHost\"", now.UnixNano()/1000000000)}
+	assert.Equal(t, expS, mS)
+}
+
 func TestSerializeMetricPrefix(t *testing.T) {
 	now := time.Now()
 	tags := map[string]string{
@@ -119,7 +204,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := WavefrontSerializer{Prefix: "telegraf"}
+	s := WavefrontSerializer{Prefix: "telegraf."}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)

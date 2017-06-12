@@ -162,7 +162,8 @@ output in hundredths of a second (`10ms`).
 
 # Wavefront:
 
-The Wavefront data format translates Telegraf metrics into the Wavefront format. The Wavefront format is:
+The Wavefront data format translates Telegraf metrics into the Wavefront format.
+The Wavefront format is:
 
 ```
 <metricName> <metricValue> [<timestamp>] source=<source> [pointTags]
@@ -181,6 +182,14 @@ The Wavefront data format translates Telegraf metrics into the Wavefront format.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "wavefront"
 
-  # prefix each wavefront metric
-  prefix = "telegraf"
+  ## prefix for metrics keys
+  prefix = "telegraf."
+
+  ## point tags to use as the source name for Wavefront (if none found, host will be used)
+  source_override = ["hostname", "snmp_host", "node_host"]
+
+  ## if source is overridden using source_override, this name will be used for
+  ## host tag. Defaults to telegraf_host
+  host_tag = "telegraf_host"
+
 ```
